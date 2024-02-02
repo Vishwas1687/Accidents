@@ -5,7 +5,7 @@ from app.loading_functions import *
 
 
 def run():
-    file = open("D:\Accidents Mini project\Load_data.csv")
+    file = open("D:\Accidents\Load_data.csv")
     accidents_file = csv.reader(file)
     Accident.objects.all().delete()
     count = 1
@@ -23,6 +23,7 @@ def run():
             weather_condition = get_weather_condition()
             type_of_road = get_type_of_road()
             road_environment = get_road_environment()
+            road_features = get_road_features()
             junction_type = get_junction_type()
             traffic_control_at_junction = get_traffic_control_at_junction()
             pedestrian_infrastructure = get_pedestrian_infrastructure()
@@ -48,6 +49,7 @@ def run():
                 weather_condition=weather_condition,
                 type_of_road=type_of_road,
                 road_environment=road_environment,
+                road_features=road_features,
                 junction_type=junction_type,
                 traffic_control_at_junction=traffic_control_at_junction,
                 pedestrian_infrastructure=pedestrian_infrastructure,
