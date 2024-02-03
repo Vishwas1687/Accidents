@@ -4,7 +4,8 @@ from .views import (
     AccidentView,
     AccidentCategoryView,
     AccidentCategoryViewWithCrossFilters,
-    AccidentCategoryPercentageWithLocation,
+    AccidentGroupedByPercentageLocation,
+    AccidentCategoryPercentageByLocation,
 )
 
 urlpatterns = [
@@ -22,7 +23,12 @@ urlpatterns = [
     ),
     path(
         "accidents-grouped-by-location-percentage/<str:category>",
-        AccidentCategoryPercentageWithLocation.as_view(),
+        AccidentGroupedByPercentageLocation.as_view(),
         name="accidents-grouped-by-location",
+    ),
+    path(
+        "accidents-category-percentage-by-location/<str:category>/<str:category_value>",
+        AccidentCategoryPercentageByLocation.as_view(),
+        name="accident-category-percentage-by-location",
     ),
 ]

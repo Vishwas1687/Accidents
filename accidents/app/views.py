@@ -61,7 +61,7 @@ class AccidentCategoryViewWithCrossFilters(APIView):
         return JsonResponse({"result_map": result_map}, safe=False)
 
 
-class AccidentCategoryPercentageWithLocation(APIView):
+class AccidentGroupedByPercentageLocation(APIView):
     def get(self, request, category):
         filtered_accidents = []
         filters = request.GET.get("filters", "[]")
@@ -129,3 +129,62 @@ class AccidentCategoryPercentageWithLocation(APIView):
             results.append(result)
 
         return JsonResponse({"accidents_grouped_by_geohash": results}, safe=False)
+
+
+class AccidentCategoryPercentageByLocation(APIView):
+    def get(self, request, category, category_value):
+        filtered_accidents = []
+        filters = request.GET.get("filters", "[]")
+        if len(filters) != 0:
+            filters = json.loads(filters)
+            final_filter = Q()
+            for filter_dict in filters:
+                for field_name, field_value in filter_dict.items():
+                    final_filter &= Q(**{field_name: field_value})
+            filtered_accidents = Accident.objects.filter(final_filter)
+        else:
+            filtered_accidents = Accident.objects.all()
+        category_value_count = filtered_accidents.values(f"{category}").annotate(
+            count=Count(f"{category}")
+        )
+        total_count = 0
+        for items in category_value_count:
+            category_val = items[f"{category}"]
+            count = items["count"]
+            if category_val == category_value:
+                total_count = count
+
+        accidents_grouped_by_geohash = filtered_accidents.values(
+            "geo_hash", f"{category}"
+        ).annotate(accidents=Count(f"{category}"))
+
+        grouped_by_geohash = {}
+        geo_hashes = Accident.objects.values_list("geo_hash", flat=True).distinct()
+        category_values = Accident.objects.values_list(
+            f"{category}", flat=True
+        ).distinct()
+        for geo_hash in geo_hashes:
+            grouped_by_geohash[geo_hash] = {}
+            for category_val in category_values:
+                grouped_by_geohash[geo_hash][category_val] = 0
+
+        for item in accidents_grouped_by_geohash:
+            geo_hash = item["geo_hash"]
+            category_val = item[f"{category}"]
+            accidents_count = item["accidents"]
+
+            grouped_by_geohash[geo_hash][category_val] += accidents_count
+
+        results = []
+        for geo_hash, category_data in grouped_by_geohash.items():
+            result = {
+                "geo_hash": geo_hash,
+                f"{category_value}": [
+                    (count / total_count) * 100
+                    for category, count in category_data.items()
+                    if category == category_value
+                ],
+            }
+            results.append(result)
+
+        return JsonResponse({"Result": results})
