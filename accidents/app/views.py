@@ -1,16 +1,21 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from django.http import JsonResponse
-from rest_framework.response import Response
+from django.conf import settings
 from .models import Accident
 from .utilFunctions import (
     calculate_bounding_box,
 )
-import pygeohash as geohash
-from django.db.models import Count, Sum, Avg
+from django.db.models import Count
 from django.db.models import Q
 from .serializer import *
 import json
+import redis
+
+# Create your views here.
+redis_instance = redis.StrictRedis(
+    host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0
+)
 
 
 # Create your views here.
@@ -30,13 +35,27 @@ class AccidentView(APIView):
 
 class AccidentCategoryView(APIView):
     def get(self, request, category):
-        distinct_values = Accident.objects.values_list(category, flat=True).distinct()
-        all_accidents = Accident.objects.all()
-        result_map = {value: [] for value in distinct_values}
-        for acc in all_accidents:
-            result_map[getattr(acc, category)].append(
-                [acc.latitude, acc.longitude, getattr(acc, category)]
+        distinct_values = []
+        key = f"unique_values:{category}"
+        value = redis_instance.get(key)
+        result_map = {}
+        if value:
+            result_map = json.loads(value)
+        else:
+            distinct_values = list(
+                Accident.objects.values_list(category, flat=True).distinct()
             )
+            all_accidents = Accident.objects.all()
+            result_map = {str(value): [] for value in distinct_values}
+
+            for acc in all_accidents:
+                category_value = str(getattr(acc, category))
+                result_map[category_value].append(
+                    [str(acc.latitude), str(acc.longitude), category_value]
+                )
+
+            redis_instance.set(key, json.dumps(result_map))
+
         return JsonResponse({"result_map": result_map}, safe=False)
 
 
@@ -48,20 +67,27 @@ class AccidentCategoryViewWithCrossFilters(APIView):
         for filter_dict in filters:
             for field_name, field_value in filter_dict.items():
                 final_filter &= Q(**{field_name: field_value})
-        all_accidents = Accident.objects.filter(final_filter)
+        key = f"accident-category-with-cross-filters:{category}:{filters}"
+        value = redis_instance.get(key)
+        result_map = {}
+        if value:
+            result_map = json.loads(value)
+        else:
+            all_accidents = Accident.objects.filter(final_filter)
 
-        distinct_values = Accident.objects.values_list(category, flat=True).distinct()
-        result_map = {value: [] for value in distinct_values}
-        for acc in all_accidents:
-            result_map[getattr(acc, category)].append(
-                [
-                    acc.latitude,
-                    acc.longitude,
-                    getattr(acc, category),
-                    acc.weather_condition,
-                    acc.month,
-                ]
-            )
+            distinct_values = Accident.objects.values_list(
+                category, flat=True
+            ).distinct()
+            result_map = {value: [] for value in distinct_values}
+            for acc in all_accidents:
+                result_map[getattr(acc, category)].append(
+                    [
+                        str(acc.latitude),
+                        str(acc.longitude),
+                        getattr(acc, category),
+                    ]
+                )
+            redis_instance.set(key, json.dumps(result_map))
         return JsonResponse({"result_map": result_map}, safe=False)
 
 
@@ -80,57 +106,67 @@ class AccidentGroupedByPercentageLocation(APIView):
         else:
             filtered_accidents = Accident.objects.all()
 
-        accidents_grouped_by_geohash = filtered_accidents.values(
-            "geo_hash", f"{category}"
-        ).annotate(accidents=Count(f"{category}"))
-        # Group by geohash and further aggregate by victim_vehicle
-
-        grouped_by_geohash = {}
-        geo_hashes = Accident.objects.values_list("geo_hash", flat=True).distinct()
-        category_values = Accident.objects.values_list(
-            f"{category}", flat=True
-        ).distinct()
-        for geo_hash in geo_hashes:
-            grouped_by_geohash[geo_hash] = {}
-            for category_val in category_values:
-                grouped_by_geohash[geo_hash][category_val] = 0
-
-        for item in accidents_grouped_by_geohash:
-            geo_hash = item["geo_hash"]
-            category_val = item[f"{category}"]
-            accidents_count = item["accidents"]
-
-            grouped_by_geohash[geo_hash][category_val] += accidents_count
-
+        key = (
+            f"accident-grouped-by-percentage-location:{category}:{comparator}:{filters}"
+        )
+        value = redis_instance.get(key)
         results = []
-        # for geo_hash, category_data in grouped_by_geohash.items():
-        #     result = {
-        #         "geo_hash": geo_hash,
-        #         f"{category}": [
-        #             {"type": category, "accidents": count}
-        #             for category, count in category_data.items()
-        #         ],
-        #     }
-        #     results.append(result)
+        if value:
+            results = json.loads(value)
+        else:
+            accidents_grouped_by_geohash = filtered_accidents.values(
+                "geo_hash", f"{category}"
+            ).annotate(accidents=Count(f"{category}"))
 
-        for geo_hash, category_data in grouped_by_geohash.items():
-            total_count = 0
-            comparator_count = 0
-            for category, count in category_data.items():
-                if category == comparator:
-                    comparator_count = comparator_count + count
-                total_count = total_count + count
-            percentage_comparison = 0
-            if total_count == 0:
+            grouped_by_geohash = {}
+            geo_hashes = Accident.objects.values_list("geo_hash", flat=True).distinct()
+            category_values = Accident.objects.values_list(
+                f"{category}", flat=True
+            ).distinct()
+            for geo_hash in geo_hashes:
+                grouped_by_geohash[geo_hash] = {}
+                for category_val in category_values:
+                    grouped_by_geohash[geo_hash][category_val] = 0
+
+            for item in accidents_grouped_by_geohash:
+                geo_hash = item["geo_hash"]
+                category_val = item[f"{category}"]
+                accidents_count = item["accidents"]
+
+                grouped_by_geohash[geo_hash][category_val] += accidents_count
+
+            # for geo_hash, category_data in grouped_by_geohash.items():
+            #     result = {
+            #         "geo_hash": geo_hash,
+            #         f"{category}": [
+            #             {"type": category, "accidents": count}
+            #             for category, count in category_data.items()
+            #         ],
+            #     }
+            #     results.append(result)
+
+            for geo_hash, category_data in grouped_by_geohash.items():
+                total_count = 0
+                comparator_count = 0
+                for category, count in category_data.items():
+                    if category == comparator:
+                        comparator_count = comparator_count + count
+                    total_count = total_count + count
                 percentage_comparison = 0
-            else:
-                percentage_comparison = ((comparator_count * 1.0) / total_count) * 100
+                if total_count == 0:
+                    percentage_comparison = 0
+                else:
+                    percentage_comparison = (
+                        (comparator_count * 1.0) / total_count
+                    ) * 100
 
-            result = {
-                "geo_hash": geo_hash,
-                f"percentage {comparator}": percentage_comparison,
-            }
-            results.append(result)
+                result = {
+                    "geo_hash": geo_hash,
+                    f"percentage {comparator}": percentage_comparison,
+                }
+                results.append(result)
+
+            redis_instance.set(key, json.dumps(results))
 
         return JsonResponse({"accidents_grouped_by_geohash": results}, safe=False)
 
@@ -159,71 +195,76 @@ class AccidentCategoryPercentageByLocation(APIView):
             filtered_accidents = Accident.objects.filter(final_filter)
         else:
             filtered_accidents = Accident.objects.all()
-        category_value_count = filtered_accidents.values(f"{category}").annotate(
-            count=Count(f"{category}")
-        )
-        total_count = 0
-        for items in category_value_count:
-            category_val = items[f"{category}"]
-            count = items["count"]
-            if category_val == category_value:
-                total_count = count
-        accidents_grouped_by_geohash = filtered_accidents.values(
-            "geo_hash", f"{category}"
-        ).annotate(accidents=Count(f"{category}"))
-
-        grouped_by_geohash = {}
-        geo_hashes = Accident.objects.values_list("geo_hash", flat=True).distinct()
-        category_values = Accident.objects.values_list(
-            f"{category}", flat=True
-        ).distinct()
-        for geo_hash in geo_hashes:
-            grouped_by_geohash[geo_hash] = {}
-            for category_val in category_values:
-                grouped_by_geohash[geo_hash][category_val] = 0
-
-        for item in accidents_grouped_by_geohash:
-            geo_hash = item["geo_hash"]
-            category_val = item[f"{category}"]
-            accidents_count = item["accidents"]
-
-            grouped_by_geohash[geo_hash][category_val] += accidents_count
-
+        key = f"accident-category-percentage-by-location:{category}:{category_value}:{filters}"
+        value = redis_instance.get(key)
         results = []
-        id_count = 0
-        for geo_hash, category_data in grouped_by_geohash.items():
-            # geo_hash_coordinate = calculate_center_coordinate(geo_hash)
-            id_count = id_count + 1
-            location = geo_hash
-            result = {
-                "geo_hash": geo_hash,
-                "geojson": {
-                    "type": "FeatureCollection",
-                    "features": [
-                        {
-                            "type": "Feature",
-                            "id": id_count,
-                            "properties": {
-                                "name": location,
-                                "density": [
-                                    (count / total_count) * 100
-                                    for category_val, count in category_data.items()
-                                    if category_val == category_value
-                                ][0],
-                            },
-                            "geometry": {
-                                "type": "Polygon",
-                                "coordinates": [calculate_bounding_box(geo_hash)],
-                            },
-                        },
-                    ],
-                },
-                f"{category_value}": [
-                    (count / total_count) * 100
-                    for category_val, count in category_data.items()
-                    if category_val == category_value
-                ],
-            }
-            results.append(result)
+        if value:
+            results = json.loads(value)
+        else:
+            category_value_count = filtered_accidents.values(f"{category}").annotate(
+                count=Count(f"{category}")
+            )
+            total_count = 0
+            for items in category_value_count:
+                category_val = items[f"{category}"]
+                count = items["count"]
+                if category_val == category_value:
+                    total_count = count
+            accidents_grouped_by_geohash = filtered_accidents.values(
+                "geo_hash", f"{category}"
+            ).annotate(accidents=Count(f"{category}"))
 
+            grouped_by_geohash = {}
+            geo_hashes = Accident.objects.values_list("geo_hash", flat=True).distinct()
+            category_values = Accident.objects.values_list(
+                f"{category}", flat=True
+            ).distinct()
+            for geo_hash in geo_hashes:
+                grouped_by_geohash[geo_hash] = {}
+                for category_val in category_values:
+                    grouped_by_geohash[geo_hash][category_val] = 0
+
+            for item in accidents_grouped_by_geohash:
+                geo_hash = item["geo_hash"]
+                category_val = item[f"{category}"]
+                accidents_count = item["accidents"]
+
+                grouped_by_geohash[geo_hash][category_val] += accidents_count
+
+            id_count = 0
+            for geo_hash, category_data in grouped_by_geohash.items():
+                # geo_hash_coordinate = calculate_center_coordinate(geo_hash)
+                id_count = id_count + 1
+                location = geo_hash
+                result = {
+                    "geo_hash": geo_hash,
+                    "geojson": {
+                        "type": "FeatureCollection",
+                        "features": [
+                            {
+                                "type": "Feature",
+                                "id": id_count,
+                                "properties": {
+                                    "name": location,
+                                    "density": [
+                                        (count / total_count) * 100
+                                        for category_val, count in category_data.items()
+                                        if category_val == category_value
+                                    ][0],
+                                },
+                                "geometry": {
+                                    "type": "Polygon",
+                                    "coordinates": [calculate_bounding_box(geo_hash)],
+                                },
+                            },
+                        ],
+                    },
+                    f"{category_value}": [
+                        (count / total_count) * 100
+                        for category_val, count in category_data.items()
+                        if category_val == category_value
+                    ],
+                }
+                results.append(result)
+            redis_instance.set(key, json.dumps(results))
         return JsonResponse({"Result": results})
