@@ -3,6 +3,10 @@ from rest_framework.views import APIView
 from django.http import JsonResponse
 from rest_framework.response import Response
 from .models import Accident
+from .utilFunctions import (
+    calculate_bounding_box,
+)
+import pygeohash as geohash
 from django.db.models import Count, Sum, Avg
 from django.db.models import Q
 from .serializer import *
@@ -140,6 +144,17 @@ class AccidentCategoryPercentageByLocation(APIView):
             final_filter = Q()
             for filter_dict in filters:
                 for field_name, field_value in filter_dict.items():
+                    # if (
+                    #     isinstance(field_value, dict)
+                    #     and "min" in field_value
+                    #     and "max" in field_value
+                    # ):
+                    #     # Handle range query
+
+                    #     final_filter &= Q(**{f"{field_name}__gte": field_value["min"]})
+                    #     final_filter &= Q(**{f"{field_name}__lte": field_value["max"]})
+                    # else:
+                    # Handle regular query
                     final_filter &= Q(**{field_name: field_value})
             filtered_accidents = Accident.objects.filter(final_filter)
         else:
@@ -153,7 +168,6 @@ class AccidentCategoryPercentageByLocation(APIView):
             count = items["count"]
             if category_val == category_value:
                 total_count = count
-
         accidents_grouped_by_geohash = filtered_accidents.values(
             "geo_hash", f"{category}"
         ).annotate(accidents=Count(f"{category}"))
@@ -176,13 +190,38 @@ class AccidentCategoryPercentageByLocation(APIView):
             grouped_by_geohash[geo_hash][category_val] += accidents_count
 
         results = []
+        id_count = 0
         for geo_hash, category_data in grouped_by_geohash.items():
+            # geo_hash_coordinate = calculate_center_coordinate(geo_hash)
+            id_count = id_count + 1
+            location = geo_hash
             result = {
                 "geo_hash": geo_hash,
+                "geojson": {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "id": id_count,
+                            "properties": {
+                                "name": location,
+                                "density": [
+                                    (count / total_count) * 100
+                                    for category_val, count in category_data.items()
+                                    if category_val == category_value
+                                ][0],
+                            },
+                            "geometry": {
+                                "type": "Polygon",
+                                "coordinates": [calculate_bounding_box(geo_hash)],
+                            },
+                        },
+                    ],
+                },
                 f"{category_value}": [
                     (count / total_count) * 100
-                    for category, count in category_data.items()
-                    if category == category_value
+                    for category_val, count in category_data.items()
+                    if category_val == category_value
                 ],
             }
             results.append(result)
