@@ -1,7 +1,7 @@
 import { MapContainer, Marker, TileLayer, GeoJSON } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { data, data2 } from "./data";
-import { style, legendMapper } from "./utils";
+import { data, data2, data3 } from "./data";
+import { style, legendMapper, findColor2 } from "./utils";
 import L from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
 import "./App.css";
@@ -18,7 +18,7 @@ import { useEffect, useState } from "react";
 const center = [12.9254150390625, 74.871826171875];
 
 const App = () => {
-  const category = "type_of_accident";
+  const category = "type_of_accident,weather_condition";
   // const mapPolygonColorToDensity = (density) => {
   //   return density > 2
   //     ? "#a50f15"
@@ -98,7 +98,7 @@ const App = () => {
         );
       })} */}
 
-        {data2.map((item, index) => (
+        {data3.map((item, index) => (
           <GeoJSON
             key={index}
             data={item.geojson.features}

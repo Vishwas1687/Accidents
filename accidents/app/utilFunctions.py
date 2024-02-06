@@ -53,6 +53,12 @@ def group_location_and_category_heirarchial(filtered_accidents, category):
     )
 
 
+def group_location_category2_heirarchial(filtered_accidents, category1, category2):
+    return filtered_accidents.values(
+        "geo_hash", f"{category1}", f"{category2}"
+    ).annotate(accidents=Count(f"{category2}"))
+
+
 def group_category_only(filtered_accidents, category):
     return filtered_accidents.values(f"{category}").annotate(
         accidents=Count(f"{category}")
@@ -68,6 +74,17 @@ def initialize_grouped_by_geohash(geo_hashes, category_values):
     return grouped_by_geohash
 
 
+def initialize2_grouped_by_geohash(geo_hashes, category1_values, category2_values):
+    grouped_by_geohash = {}
+    for geo_hash in geo_hashes:
+        grouped_by_geohash[geo_hash] = {}
+        for category1_val in category1_values:
+            grouped_by_geohash[geo_hash][category1_val] = {}
+            for category2_val in category2_values:
+                grouped_by_geohash[geo_hash][category1_val][category2_val] = 0
+    return grouped_by_geohash
+
+
 def populate_geohash_category_accidents_map(
     accidents_grouped_by_geohash, grouped_by_geohash, category
 ):
@@ -77,4 +94,17 @@ def populate_geohash_category_accidents_map(
         accidents_count = item["accidents"]
 
         grouped_by_geohash[geo_hash][category_val] += accidents_count
+    return grouped_by_geohash
+
+
+def populate_geohash_category2_accidents_map(
+    accidents_grouped_by_geohash, grouped_by_geohash, category1, category2
+):
+
+    for item in accidents_grouped_by_geohash:
+        geo_hash = item["geo_hash"]
+        category_val1 = item[f"{category1}"]
+        category_val2 = item[f"{category2}"]
+        accidents_count = item["accidents"]
+        grouped_by_geohash[geo_hash][category_val1][category_val2] += accidents_count
     return grouped_by_geohash

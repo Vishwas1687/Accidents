@@ -8,9 +8,12 @@ from .utilFunctions import (
     prepare_filter,
     get_unique_category_values,
     group_location_and_category_heirarchial,
+    group_location_category2_heirarchial,
     initialize_grouped_by_geohash,
+    initialize2_grouped_by_geohash,
     group_category_only,
     populate_geohash_category_accidents_map,
+    populate_geohash_category2_accidents_map,
 )
 from django.db.models import Count
 from django.db.models import Q
@@ -290,3 +293,73 @@ class AccidentGroupedCategoryByCumulative(APIView):
             redis_instance.set(key, json.dumps(results))
 
         return JsonResponse({"accidents_grouped_by_geohash": results}, safe=False)
+
+
+class Accident2CategoriesGroupedByLocation(APIView):
+    def get(self, request, category1, category2):
+        filtered_accidents = []
+        filters = request.GET.get("filters", "[]")
+        if len(filters) != 0:
+            filters = json.loads(filters)
+            final_filter = prepare_filter(filters)
+            filtered_accidents = Accident.objects.filter(final_filter)
+        else:
+            filtered_accidents = Accident.objects.all()
+        key = f"accidents-2-grouped-category-by-location:{category1}:{category2}:{filters}"
+        value = redis_instance.get(key)
+        results = []
+        if value:
+            results = json.loads(value)
+        else:
+            accidents_grouped_by_geohash = group_location_category2_heirarchial(
+                filtered_accidents, category1, category2
+            )
+            grouped_by_geohash = {}
+            geo_hashes = get_unique_category_values("geo_hash")
+            category1_values = get_unique_category_values(category1)
+            category2_values = get_unique_category_values(category2)
+            grouped_by_geohash = initialize2_grouped_by_geohash(
+                geo_hashes, category1_values, category2_values
+            )
+            grouped_by_geohash = populate_geohash_category2_accidents_map(
+                accidents_grouped_by_geohash, grouped_by_geohash, category1, category2
+            )
+            results = []
+            id_count = 0
+            for geo_hash, category_data in grouped_by_geohash.items():
+                location = geo_hash
+                combined_accidents = []
+                for category1_val, category2_data in category_data.items():
+                    for category2_val, count in category2_data.items():
+                        combined_accidents.append(
+                            {
+                                "type": f"{category1_val} and {category2_val}",
+                                "accidents": count,
+                            }
+                        )
+                sorted_combined_accidents = sorted(
+                    combined_accidents, key=lambda x: x["accidents"], reverse=True
+                )
+                id_count = id_count + 1
+                result = {
+                    "geo_hash": geo_hash,
+                    "geojson": {
+                        "type": "FeatureCollection",
+                        "features": [
+                            {
+                                "type": "Feature",
+                                "id": id_count,
+                                "properties": {
+                                    "name": location,
+                                    f"{category1},{category2}": sorted_combined_accidents,
+                                },
+                                "geometry": {
+                                    "type": "Polygon",
+                                    "coordinates": [calculate_bounding_box(geo_hash)],
+                                },
+                            },
+                        ],
+                    },
+                }
+                results.append(result)
+        return JsonResponse({"result": list(results)}, safe=False)

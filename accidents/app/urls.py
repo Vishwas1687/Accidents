@@ -7,6 +7,7 @@ from .views import (
     AccidentGroupedByPercentageLocation,
     AccidentCategoryPercentageByLocation,
     AccidentGroupedCategoryByCumulative,
+    Accident2CategoriesGroupedByLocation,
 )
 
 urlpatterns = [
@@ -36,5 +37,10 @@ urlpatterns = [
         "accidents-grouped-category-by-cumulative/<str:category>",
         AccidentGroupedCategoryByCumulative.as_view(),
         name="accident-grouped-category-by-cumulative",
+    ),
+    path(
+        "accidents-2-categories-grouped-by-location/<str:category1>/<str:category2>",
+        Accident2CategoriesGroupedByLocation.as_view(),
+        name="accident-2-categories-grouped-by-location",
     ),
 ]
