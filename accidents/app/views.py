@@ -322,7 +322,10 @@ class Accident2CategoriesGroupedByLocation(APIView):
                 geo_hashes, category1_values, category2_values
             )
             grouped_by_geohash = populate_geohash_category2_accidents_map(
-                accidents_grouped_by_geohash, grouped_by_geohash, category1, category2
+                accidents_grouped_by_geohash,
+                grouped_by_geohash,
+                category1,
+                category2,
             )
             results = []
             id_count = 0
@@ -362,4 +365,5 @@ class Accident2CategoriesGroupedByLocation(APIView):
                     },
                 }
                 results.append(result)
+            redis_instance.set(key, json.dumps(results))
         return JsonResponse({"result": list(results)}, safe=False)

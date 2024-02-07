@@ -1,7 +1,7 @@
 import pygeohash as geohash
 from django.db.models import Q
 from .models import Accident
-from django.db.models import Count
+from django.db.models import Count, Case, When, IntegerField
 
 # from geopy.geocoders import Nominatim
 
@@ -39,7 +39,13 @@ def prepare_filter(filters):
     filter_query = Q()
     for filter_dict in filters:
         for field_name, field_value in filter_dict.items():
-            filter_query &= Q(**{field_name: field_value})
+            if isinstance(field_value, dict):
+                min_value = field_value["min"]
+                max_value = field_value["max"]
+                filter_query &= Q(**{f"{field_name}__gte": min_value})
+                filter_query &= Q(**{f"{field_name}__lte": max_value})
+            else:
+                filter_query &= Q(**{field_name: field_value})
     return filter_query
 
 
@@ -54,6 +60,35 @@ def group_location_and_category_heirarchial(filtered_accidents, category):
 
 
 def group_location_category2_heirarchial(filtered_accidents, category1, category2):
+    # if category1 == "victim_age":
+    #     age_ranges = [
+    #         (0, 10),
+    #         (11, 20),
+    #         (21, 30),
+    #         (31, 40),
+    #         (41, 50),
+    #         (51, 60),
+    #         (61, 70),
+    #         (71, 80),
+    #         (81, 90),
+    #         (91, 100),
+    #     ]
+
+    #     age_conditions = [
+    #         When(victim_age__range=(start, end), then=end) for start, end in age_ranges
+    #     ]
+    #     age_case = Case(
+    #         *age_conditions,
+    #         default=None,
+    #         output_field=IntegerField(),
+    #     )
+    #     value = (
+    #         filtered_accidents.annotate(age_group=age_case)
+    #         .values("geo_hash", f"{category2}", "age_group")
+    #         .annotate(accidents=Count(f"{category2}"))
+    #     )
+    #     return value
+    # else:
     return filtered_accidents.values(
         "geo_hash", f"{category1}", f"{category2}"
     ).annotate(accidents=Count(f"{category2}"))
