@@ -3,6 +3,9 @@ from rest_framework.views import APIView
 from django.http import JsonResponse
 from django.conf import settings
 from .models import Accident
+import pygeohash as geohash
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
 from .utilFunctions import (
     calculate_bounding_box,
     prepare_filter,
@@ -33,6 +36,19 @@ class AccidentsView(APIView):
         raw_data = Accident.objects.all()
         serializer = AccidentSerializer(raw_data, many=True)
         return JsonResponse(serializer.data, safe=False)
+
+
+class UniqueCategoryView(APIView):
+    def get(self, request, category):
+        key = f"unique-category-values:{category}"
+        value = redis_instance.get(key)
+        distinct_values = []
+        if value:
+            distinct_values = json.loads(value)
+        else:
+            distinct_values = get_unique_category_values(category)
+            redis_instance.set(key, json.dumps(distinct_values))
+        return JsonResponse({"distinct_values": list(distinct_values)})
 
 
 class AccidentView(APIView):
@@ -172,7 +188,7 @@ class AccidentCategoryPercentageByLocation(APIView):
             total_count = 0
             for items in category_value_count:
                 category_val = items[f"{category}"]
-                count = items["count"]
+                count = items["accidents"]
                 if category_val == category_value:
                     total_count = count
             accidents_grouped_by_geohash = group_location_and_category_heirarchial(
@@ -315,6 +331,7 @@ class Accident2CategoriesGroupedByLocation(APIView):
                 filtered_accidents, category1, category2
             )
             grouped_by_geohash = {}
+
             geo_hashes = get_unique_category_values("geo_hash")
             category1_values = get_unique_category_values(category1)
             category2_values = get_unique_category_values(category2)
@@ -367,3 +384,24 @@ class Accident2CategoriesGroupedByLocation(APIView):
                 results.append(result)
             redis_instance.set(key, json.dumps(results))
         return JsonResponse({"result": list(results)}, safe=False)
+
+
+class LocationAddress(APIView):
+    def get(self, request):
+        geolocator = Nominatim(user_agent="geocoder")
+        distinct_geo_hashes = get_unique_category_values("geo_hash")
+        geohash_coordinates = [
+            (lat, lon)
+            for lat, lon in (
+                geohash.decode(geo_hash) for geo_hash in distinct_geo_hashes
+            )
+        ]
+        addresses = []
+        for lat, lon in geohash_coordinates:
+            try:
+                address = geolocator.reverse((lat, lon))
+                addresses.extend([location.address for location in address])
+                print(address[0].address)
+            except GeocoderTimedOut:
+                addresses.append("Timeout")
+        return JsonResponse({"addresses": list(addresses)}, safe=False)

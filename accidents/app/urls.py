@@ -8,6 +8,8 @@ from .views import (
     AccidentCategoryPercentageByLocation,
     AccidentGroupedCategoryByCumulative,
     Accident2CategoriesGroupedByLocation,
+    UniqueCategoryView,
+    LocationAddress,
 )
 
 urlpatterns = [
@@ -43,4 +45,10 @@ urlpatterns = [
         Accident2CategoriesGroupedByLocation.as_view(),
         name="accident-2-categories-grouped-by-location",
     ),
+    path(
+        "unique-category-values/<str:category>",
+        UniqueCategoryView.as_view(),
+        name="unique-category-values",
+    ),
+    path("location-address", LocationAddress.as_view(), name="location-address"),
 ]
