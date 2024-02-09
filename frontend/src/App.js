@@ -7,14 +7,22 @@ import {
   LayersControl,
   LayerGroup,
 } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import { HeatmapLayer } from "react-leaflet-heatmap-layer-v3";
 import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 import { style, legendMapper, findColor2 } from "./utils";
 import icon from "leaflet/dist/images/marker-icon.png";
 import { data, data2, data3 } from "./data";
 import "./App.css";
 
 const center = [12.9254150390625, 74.871826171875];
+
+const customMarker = L.icon({
+  iconUrl: icon,
+  iconSize: [25, 35],
+  iconAnchor: [12, 35],
+});
 
 const App = () => {
   const mapRef = useRef(null);
@@ -114,6 +122,17 @@ const App = () => {
                 />
               ))}
             </LayerGroup>
+          </LayersControl.Overlay>
+          <LayersControl.Overlay name="clusters">
+            <MarkerClusterGroup chunkedLoading>
+              {addressPoints.map((point, index) => (
+                <Marker
+                  key={index}
+                  icon={customMarker}
+                  position={[point[0], point[1]]}
+                />
+              ))}
+            </MarkerClusterGroup>
           </LayersControl.Overlay>
         </LayersControl>
       </MapContainer>
