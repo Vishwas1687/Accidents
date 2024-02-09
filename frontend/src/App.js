@@ -23,10 +23,17 @@ const App = () => {
     [12.9254150390625, 74.8828125, 2],
     [12.930908203125, 74.8828125, 3],
     [12.930908203125, 74.86083984375, 2],
+    [12.9583740234375, 74.871826171875, 3],
+    [12.9583740234375, 74.8828125, 10],
+    [12.9638671875, 74.8828125, 5],
+    [12.9638671875, 74.871826171875, 1],
   ];
 
   const category = "type_of_accident,weather_condition";
   const [onSelect, setOnSelect] = useState([]);
+  const [isHeatmapChecked, setIsHeatmapChecked] = useState(false);
+  const [isGridChecked, setIsGridChecked] = useState(true);
+  const [map, setMap] = useState();
 
   const highlightFeature = (e) => {
     const layer = e.target;
@@ -50,11 +57,14 @@ const App = () => {
       mouseout: resetHighlight,
     });
   };
-  const map = mapRef.current;
+
+  useEffect(() => {
+    setMap(mapRef.current);
+  }, [map]);
 
   return (
     <>
-      {/* {Object.keys(onSelect).length != 0 ? (
+      {isGridChecked && onSelect.length !== 0 && (
         <div className="location-detail">
           <ul className="category-accidents">
             {onSelect.map((cat) => (
@@ -64,33 +74,48 @@ const App = () => {
             ))}
           </ul>
         </div>
-      ) : (
-        <div className="location-detail">hello</div>
-      )} */}
+      )}
+
       <MapContainer center={center} zoom={12} ref={mapRef}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {map && (
-          <HeatmapLayer
-            fitBoundsOnLoad
-            fitBoundsOnUpdate
-            points={addressPoints}
-            longitudeExtractor={(m) => m[1]}
-            latitudeExtractor={(m) => m[0]}
-            intensityExtractor={(m) => parseFloat(m[2])}
-            radius={25}
-          />
-        )}
-        {/* {data3.map((item, index) => (
-          <GeoJSON
-            key={index}
-            data={item.geojson.features}
-            style={style}
-            onEachFeature={onEachFeature}
-          />
-        ))} */}
+        <LayersControl>
+          <LayersControl.Overlay
+            checked={isHeatmapChecked}
+            name="Heatmap"
+            onChange={() => setIsHeatmapChecked((prev) => !prev)}
+          >
+            {map && (
+              <HeatmapLayer
+                fitBoundsOnLoad
+                fitBoundsOnUpdate
+                points={addressPoints}
+                longitudeExtractor={(m) => m[1]}
+                latitudeExtractor={(m) => m[0]}
+                intensityExtractor={(m) => parseFloat(m[2])}
+                radius={25}
+              />
+            )}
+          </LayersControl.Overlay>
+          <LayersControl.Overlay
+            checked={isGridChecked}
+            name="Grid"
+            onChange={() => setIsGridChecked((prev) => !prev)}
+          >
+            <LayerGroup>
+              {data3.map((item, index) => (
+                <GeoJSON
+                  key={index}
+                  data={item.geojson.features}
+                  style={style}
+                  onEachFeature={onEachFeature}
+                />
+              ))}
+            </LayerGroup>
+          </LayersControl.Overlay>
+        </LayersControl>
       </MapContainer>
     </>
   );
