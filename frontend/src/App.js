@@ -113,12 +113,12 @@ const App = () => {
             onChange={() => setIsGridChecked((prev) => !prev)}
           >
             <LayerGroup>
-              {data3.map((item, index) => (
+              {data.map((item, index) => (
                 <GeoJSON
                   key={index}
                   data={item.geojson.features}
                   style={style}
-                  onEachFeature={onEachFeature}
+                  // onEachFeature={onEachFeature}
                 />
               ))}
             </LayerGroup>

@@ -141,7 +141,7 @@ class AccidentGroupedByPercentageLocation(APIView):
             grouped_by_geohash = populate_geohash_category_accidents_map(
                 accidents_grouped_by_geohash, grouped_by_geohash, category
             )
-
+            id_count = 0
             for geo_hash, category_data in grouped_by_geohash.items():
                 total_count = 0
                 comparator_count = 0
@@ -156,12 +156,32 @@ class AccidentGroupedByPercentageLocation(APIView):
                     percentage_comparison = (
                         (comparator_count * 1.0) / total_count
                     ) * 100
-
-                result = {
-                    "geo_hash": geo_hash,
-                    f"percentage {comparator}": percentage_comparison,
-                }
-                results.append(result)
+                id_count = id_count + 1
+                location = geo_hash
+                if percentage_comparison != 0:
+                    result = {
+                        "geo_hash": geo_hash,
+                        "geojson": {
+                            "type": "FeatureCollection",
+                            "features": [
+                                {
+                                    "type": "Feature",
+                                    "id": id_count,
+                                    "properties": {
+                                        "name": location,
+                                        "density": percentage_comparison,
+                                    },
+                                    "geometry": {
+                                        "type": "Polygon",
+                                        "coordinates": [
+                                            calculate_bounding_box(geo_hash)
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                    }
+                    results.append(result)
 
             redis_instance.set(key, json.dumps(results))
 
