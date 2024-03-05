@@ -10,6 +10,7 @@ import L from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
 import "../App.css";
 import "leaflet/dist/leaflet.css";
+import { createClusterCustomIcon } from "../utils/ClusterUtils";
 import Heatmap from "./MapComponents/Heatmap";
 import Cluster from './MapComponents/Cluster'
 import GeoHashGrid from "./MapComponents/GeoHashGrid";
@@ -53,7 +54,9 @@ const Map = () => {
             </LayerGroup>
           </LayersControl.Overlay>
           <LayersControl.Overlay name="clusters">
-            <MarkerClusterGroup chunkedLoading>
+            <MarkerClusterGroup chunkedLoading
+             iconCreateFunction={createClusterCustomIcon}
+            >
               <Cluster customMarker={customMarker}/>
             </MarkerClusterGroup>
           </LayersControl.Overlay>

@@ -4,8 +4,6 @@ from .models import Accident
 from django.db.models import Count, Case, When, IntegerField
 
 # from geopy.geocoders import Nominatim
-
-
 def calculate_bounding_box(geo_hash):
     lat, lon, lat_err, lon_err = geohash.decode_exactly(geo_hash)
     min_lat = lat - lat_err
