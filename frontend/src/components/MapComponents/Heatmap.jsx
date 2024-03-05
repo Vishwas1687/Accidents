@@ -1,5 +1,6 @@
 import React,{useState,useEffect} from 'react'
 import { HeatmapLayer } from "react-leaflet-heatmap-layer-v3";
+import {addressPoints} from '../../utils/HeatmapUtils'
 const Heatmap = ({map,mapRef}) => {
   const addressPoints = [
     [12.9254150390625, 74.871826171875, 1],

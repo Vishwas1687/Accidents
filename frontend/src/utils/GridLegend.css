@@ -1,0 +1,18 @@
+.legend {
+    text-align: left;
+    line-height: 18px;
+    width:10rem;
+    max-height:25rem;
+    padding:0.3rem;
+    position:absolute;
+    bottom:2rem;
+    right:2rem;
+    z-index:1000;
+    color: #555;
+}
+
+.info {
+    font: 14px/16px Arial, Helvetica, sans-serif;
+    background: white;
+    border-radius: 5px;
+}

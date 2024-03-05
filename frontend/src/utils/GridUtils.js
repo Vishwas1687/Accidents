@@ -1,10 +1,11 @@
 // const category = "type_of_accident,weather_condition";
-
-const colorMapper = {
-    High: "",
-    Medium: "",
-    Low: "",
-    "Very low": "",
+export const colorMapper = {
+  "75-100":"",
+  "50-75":"",
+  "25-50":"",
+  "0-25":"",
+    
+    
   };
   const colors = [
     "red",
@@ -18,7 +19,7 @@ const colorMapper = {
     "white",
   ];
   
-  const setUpColors = () => {
+  export const setUpColors = () => {
     let i = 0;
     for (let key in colorMapper) {
       colorMapper[key] = colors[i];
@@ -26,23 +27,26 @@ const colorMapper = {
     }
   };
   
-  export const findColor2 = (density) => {
+  export const findColor2 = (density,breakpoints) => {
     setUpColors();
-  
-    if (density > 40) {
-      return colorMapper["High"]; // Assign a color for density > 40
-    } else if (density > 20) {
-      return colorMapper["Medium"]; // Assign a color for density > 20
-    } else if (density > 5) {
-      return colorMapper["Low"]; // Assign a color for density > 5
-    } else {
-      return colorMapper["Very Low"]; // Assign a color for density<5
+    if(Object.keys(breakpoints).length!==0)
+    {
+      if (density < breakpoints["0-25"]) {
+        return colorMapper["0-25"]; // Assign a color for density > 40
+      } else if (density <breakpoints["25-50"]) {
+        return colorMapper["25-50"]; // Assign a color for density > 20
+      } else if (density < breakpoints["50-75"]) {
+        return colorMapper["50-75"]; // Assign a color for density > 5
+      } else {
+        return colorMapper["75-100"]; // Assign a color for density<5
+      }
     }
+    
   };
   
-  export const style = (feature) => {
+  export const style = (feature,breakpoints) => {
     return {
-      fillColor: findColor2(feature.properties.density),
+      fillColor: findColor2(feature?.properties?.density,breakpoints),
       weight: 1,
       opacity: 1,
       color: "white",
