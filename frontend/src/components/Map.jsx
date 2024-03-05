@@ -42,7 +42,7 @@ const Map = () => {
             name="Heatmap"
             onChange={() => setIsHeatmapChecked((prev) => !prev)}
           >
-              <Heatmap map={map}/>
+              <Heatmap map={map} mapRef={mapRef}/>
           </LayersControl.Overlay>
           <LayersControl.Overlay
             checked={isGridChecked}

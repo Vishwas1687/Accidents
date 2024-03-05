@@ -12,7 +12,6 @@ const Cluster = ({customMarker}) => {
     [12.9638671875, 74.871826171875, 1],
 ];
 
-// Generate 200 more address points within the specified range
 for (let i = 0; i < 3000; i++) {
     const latitude = getRandomNumberInRange(12.85, 13.10);
     const longitude = getRandomNumberInRange(74.8, 75.0);
@@ -21,7 +20,6 @@ for (let i = 0; i < 3000; i++) {
     addressPoints.push([latitude, longitude, value]);
 }
 
-// Function to generate a random number within a specified range
 function getRandomNumberInRange(min, max) {
     return Math.random() * (max - min) + min;
 }
