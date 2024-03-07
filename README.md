@@ -1,31 +1,12 @@
 
-**Accidents-backend**
+**Accidents-frontend**
 
-1) Create a virtual environment in the root directory.<br>
+1) Install the dependencies of the project
  ```
-python -m venv .venv
+npm install
 ```
 
-2) Activate your virtual environment using <br>
+2) Run the code using
 ```
-venv\Scripts\activate
+npm start
 ```
-
-3) Pull the docker image for postgres <br>
- ```
-docker run -d --name gis -p 5432:5432 -e POSTGRES_PASSWORD=123456789 postgres:14
-```
-
-4) Build the docker image of the container using the Dockerfile
-```
-docker build -t accidents .
-```
-5) Run the docker-compose.yml file
-```
-docker-compose up
-```
-6) Run the server on
-```
-127.0.0.1:8000
-```
-
