@@ -1,12 +1,14 @@
 
 **Accidents-frontend**
-
-1) Install the dependencies of the project
+1) Move to the frontend directory
+```
+  cd frontend
+```
+2) Build the docker image for the frontend
  ```
-npm install
+  docker build -t frontend .
 ```
-
-2) Run the code using
+3) Run the docker-compose file
 ```
-npm start
+ docker-compose up
 ```
