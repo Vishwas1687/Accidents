@@ -1,8 +1,9 @@
 import React,{useEffect} from 'react'
 import '../../utils/GridLegend.css'
-const GridLegend = ({colorMapper,breakpoints}) => {
+const GridLegend = ({colorMapper,breakpoints,isGridChecked}) => {
     return (
-        <div className='info legend'>
+        <>
+        <div className='info legend' style={{'zIndex':`${isGridChecked?1000:0}`}}>
     {Object.keys(colorMapper).map((record) => (
         <div key={record} style={{
             height: '2rem',
@@ -20,6 +21,7 @@ const GridLegend = ({colorMapper,breakpoints}) => {
     ))}
 </div>
 
+</>
     )
 }
 

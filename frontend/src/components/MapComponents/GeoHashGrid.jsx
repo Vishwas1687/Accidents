@@ -1,9 +1,9 @@
 import React from 'react'
 import { GeoJSON } from 'react-leaflet';
-import { data} from "../../data";
+import { data,data4} from "../../data";
 import { style,colorMapper,setUpColors} from"../../utils/GridUtils"
 import GridLegend from './GridLegend';
-const GeoHashGrid = ({map,breakpoints}) => {
+const GeoHashGrid = ({map,breakpoints,isGridChecked}) => {
   // const category = "type_of_accident,weather_condition";
   // const [onSelect, setOnSelect] = useState([]);
 
@@ -39,7 +39,8 @@ const GeoHashGrid = ({map,breakpoints}) => {
             // onEachFeature={onEachFeature}
           />
         ))}
-        {map && <GridLegend map={map} colorMapper={colorMapper} breakpoints={breakpoints}/>}
+        {map && <GridLegend map={map} colorMapper={colorMapper} breakpoints={breakpoints}
+        isGridChecked={isGridChecked}/>}
     </div>
   )
 }

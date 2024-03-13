@@ -31,14 +31,14 @@ export const colorMapper = {
     setUpColors();
     if(Object.keys(breakpoints).length!==0)
     {
-      if (density < breakpoints["0-25"]) {
-        return colorMapper["0-25"]; // Assign a color for density > 40
-      } else if (density <breakpoints["25-50"]) {
-        return colorMapper["25-50"]; // Assign a color for density > 20
-      } else if (density < breakpoints["50-75"]) {
-        return colorMapper["50-75"]; // Assign a color for density > 5
+      if (density >=breakpoints["75-100"]) {
+        return colorMapper["75-100"]; // Assign a color for density > 40
+      } else if (density >=breakpoints["50-75"]) {
+        return colorMapper["50-75"]; // Assign a color for density > 20
+      } else if (density >= breakpoints["25-50"]) {
+        return colorMapper["25-50"]; // Assign a color for density > 5
       } else {
-        return colorMapper["75-100"]; // Assign a color for density<5
+        return colorMapper["0-25"]; // Assign a color for density<5
       }
     }
     

@@ -6,7 +6,7 @@ import {
   } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import React,{useState,useEffect,useRef} from 'react'
-import {data} from '../data.js'
+import {data,data4} from '../data.js'
 import L from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
 import "../App.css";
@@ -55,17 +55,20 @@ const Map = () => {
   );
   const fourthPercentile = values.slice(Math.ceil(totalLength * 0.75));
   const value_obj={
-    "0-25":firstPercentile[firstPercentile.length-1],
-    "25-50":secondPercentile[secondPercentile.length-1],
-    "50-75":thirdPercentile[thirdPercentile.length-1],
-    "75-100":fourthPercentile[fourthPercentile.length-1]
+    "0-25":firstPercentile[0],
+    "25-50":secondPercentile[0],
+    "50-75":thirdPercentile[0],
+    "75-100":fourthPercentile[0]
   }
+  console.log(firstPercentile,secondPercentile,thirdPercentile,fourthPercentile)
     setDensityValues(value_obj)
   }
 
   useEffect(()=>{
+    if(isGridChecked)
     getDensityValues()
-  },[])
+  },[isGridChecked])
+
 
 
   return (
@@ -78,17 +81,20 @@ const Map = () => {
           <LayersControl.Overlay
             checked={isHeatmapChecked}
             name="Heatmap"
-            onChange={() => setIsHeatmapChecked((prev) => !prev)}
+            onAdd={() => setIsHeatmapChecked(true)}
+             onRemove={() => setIsHeatmapChecked(false)}
           >
               <Heatmap map={map} mapRef={mapRef}/>
           </LayersControl.Overlay>
           <LayersControl.Overlay
             checked={isGridChecked}
             name="Grid"
-            onChange={() => setIsGridChecked((prev) => !prev)}
+            onAdd={() => setIsGridChecked(true)}
+            onRemove={() => setIsGridChecked(false)}
           >
             <LayerGroup>
-              <GeoHashGrid map={map} breakpoints={densityValues}/>
+              {console.log(isGridChecked)}
+              <GeoHashGrid map={map} breakpoints={densityValues} isGridChecked={isGridChecked}/>
             </LayerGroup>
           </LayersControl.Overlay>
           <LayersControl.Overlay name="clusters">

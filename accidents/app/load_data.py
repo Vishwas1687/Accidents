@@ -12,7 +12,7 @@ month = [
     "april",
     "may",
     "june",
-    "july",
+    "july", 
     "august",
     "september",
     "october",
